@@ -52,13 +52,35 @@ that don't currently record anything:
   turns an ad hoc health check into a scraped signal.
 * **Catalog cache** (see above) — hits/misses/discovery-errors, exposed as-is.
 
+## Enable/disable, and the Helm chart (added 2026-09-04, Ivan's ask)
+
+Both were originally deferred; Ivan asked (`operator_telegram`) to cover them now
+rather than as follow-up.
+
+* **On/off toggle** was already implicit in step 2 above (`Server.Metrics.Enabled`
+  gating the `/metrics` registration) — made explicit here as a requirement, not just
+  an implementation detail. Off by default matches how TLS/OAuth already behave in
+  `pkg/config`, so a deploy that doesn't want metrics exposed doesn't get them by
+  accident.
+* **Helm chart** (`helm/altinity-mcp/`): checked the chart directly — `values.yaml`
+  already has a `service:` block (`type`, `port: 8080`, `annotations: {}`) but no
+  `metrics:` block, and no `servicemonitor.yaml` template exists among
+  `deployment.yaml` / `service.yaml` / `ingress.yaml` / `hpa.yaml` / the OAuth and
+  multicluster variants. Plan:
+  1. `values.yaml` gets a `metrics.enabled` (bool, default matching the binary's
+     default) and `metrics.serviceMonitor.enabled` (bool, default `false` — a
+     ServiceMonitor is a Prometheus Operator CRD and assuming it's installed would
+     break a cluster that doesn't run one).
+  2. `service.yaml` exposes the metrics port when `metrics.enabled` is true.
+  3. A new `servicemonitor.yaml` template, rendered only when
+     `metrics.serviceMonitor.enabled` is true — kept as a separate flag from
+     `metrics.enabled` specifically so "the app exposes metrics" and "Prometheus
+     Operator should scrape them" stay two decisions, not one.
+
 ## Deliberately not planned yet
 
 * No OpenTelemetry tracing — metrics only, per what was asked. Tracing is a much
   bigger surface (context propagation through every handler) and wasn't requested.
-* No Helm chart changes (`helm/altinity-mcp/`) for a `ServiceMonitor` or Prometheus
-  scrape annotations in this pass — worth a follow-up once the metrics themselves
-  exist and their names are stable enough to commit to in a chart.
 * No decision here on cardinality limits for cluster labels (a router with many
   clusters could produce a lot of series) — flagging it so the implementation doesn't
   skip it, not solving it in a planning doc.
