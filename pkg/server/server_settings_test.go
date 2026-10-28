@@ -42,7 +42,9 @@ func TestValidateToolInputSettings(t *testing.T) {
 		wantWarnings int
 		warnContains string
 	}{
-		{"valid_custom_prefix", []string{"custom_tenant_id", "custom_user_id"}, "", 0, ""},
+		{"sql_underscore_silent", []string{"SQL_tenant_id", "SQL_user_id"}, "", 0, ""},
+		{"sql_underscore_any_case", []string{"sql_lower", "SQL_upper", "sQl_mixed"}, "", 0, ""},
+		{"custom_prefix_warns", []string{"custom_tenant_id", "custom_user_id"}, "", 2, "SQL_"},
 		{"nil_settings", nil, "", 0, ""},
 		{"empty_settings", []string{}, "", 0, ""},
 		{"blocked_readonly", []string{"readonly"}, "blocked", 0, ""},
@@ -53,8 +55,8 @@ func TestValidateToolInputSettings(t *testing.T) {
 		{"blocked_user", []string{"user"}, "blocked", 0, ""},
 		{"duplicate_setting", []string{"custom_a", "custom_a"}, "duplicate", 0, ""},
 		{"duplicate_case_insensitive", []string{"Custom_A", "custom_a"}, "duplicate", 0, ""},
-		{"warn_non_custom_prefix", []string{"my_setting"}, "", 1, "does not start with 'custom_'"},
-		{"warn_mixed", []string{"custom_ok", "not_custom"}, "", 1, "not_custom"},
+		{"non_sql_prefix_warns", []string{"my_setting"}, "", 1, "SQL_"},
+		{"warn_mixed", []string{"SQL_ok", "not_custom"}, "", 1, "not_custom"},
 		{"warn_multiple_non_custom", []string{"env_name", "region_code"}, "", 2, ""},
 	}
 
@@ -63,12 +65,16 @@ func TestValidateToolInputSettings(t *testing.T) {
 			warnings, err := validateToolInputSettings(tc.settings)
 			if tc.wantErr != "" {
 				require.ErrorContains(t, err, tc.wantErr)
+				require.Empty(t, warnings)
 				return
 			}
 			require.NoError(t, err)
 			require.Len(t, warnings, tc.wantWarnings)
 			if tc.warnContains != "" && len(warnings) > 0 {
-				require.Contains(t, warnings[0], tc.warnContains)
+				for _, warning := range warnings {
+					require.Contains(t, warning, tc.warnContains)
+					require.Contains(t, warning, "custom_settings_prefixes")
+				}
 			}
 		})
 	}
