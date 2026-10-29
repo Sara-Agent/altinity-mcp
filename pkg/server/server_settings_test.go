@@ -42,7 +42,7 @@ func TestValidateToolInputSettings(t *testing.T) {
 		wantWarnings int
 		warnContains string
 	}{
-		{"valid_custom_prefix", []string{"custom_tenant_id", "custom_user_id"}, "", 0, ""},
+		{"valid_sql_prefix", []string{"SQL_tenant_id", "SQL_user_id"}, "", 0, ""},
 		{"nil_settings", nil, "", 0, ""},
 		{"empty_settings", []string{}, "", 0, ""},
 		{"blocked_readonly", []string{"readonly"}, "blocked", 0, ""},
@@ -53,8 +53,9 @@ func TestValidateToolInputSettings(t *testing.T) {
 		{"blocked_user", []string{"user"}, "blocked", 0, ""},
 		{"duplicate_setting", []string{"custom_a", "custom_a"}, "duplicate", 0, ""},
 		{"duplicate_case_insensitive", []string{"Custom_A", "custom_a"}, "duplicate", 0, ""},
-		{"warn_non_custom_prefix", []string{"my_setting"}, "", 1, "does not start with 'custom_'"},
-		{"warn_mixed", []string{"custom_ok", "not_custom"}, "", 1, "not_custom"},
+		{"warn_non_sql_prefix", []string{"my_setting"}, "", 1, "does not start with 'SQL_'"},
+		{"warn_custom_prefix_is_not_real", []string{"custom_tenant_id"}, "", 1, "SQL_"},
+		{"warn_mixed", []string{"SQL_ok", "not_sql"}, "", 1, "not_sql"},
 		{"warn_multiple_non_custom", []string{"env_name", "region_code"}, "", 2, ""},
 	}
 
@@ -74,7 +75,7 @@ func TestValidateToolInputSettings(t *testing.T) {
 	}
 
 	t.Run("public_api_delegates_correctly", func(t *testing.T) {
-		require.NoError(t, ValidateToolInputSettings([]string{"custom_tenant_id"}))
+		require.NoError(t, ValidateToolInputSettings([]string{"SQL_tenant_id"}))
 		require.Error(t, ValidateToolInputSettings([]string{"readonly"}))
 	})
 }
